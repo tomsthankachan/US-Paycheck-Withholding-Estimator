@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>US Paycheck &amp; Withholding Estimator</title>
+<style>
+  :root {
+    --paper: #EFEAE0;
+    --paper-deep: #E5DFD1;
+    --ink: #1F2A24;
+    --ink-soft: #5B6259;
+    --line: #C9C0AC;
+    --brass: #9C7A3C;
+    --debit: #7A3B32;
+    --panel: #FBF9F4;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+  }
+  .wrap {
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 56px 24px 90px;
+  }
+  header {
+    margin-bottom: 40px;
+    border-bottom: 2px solid var(--ink);
+    padding-bottom: 20px;
+  }
+  h1 {
+    font-size: 30px;
+    margin: 0 0 8px;
+    letter-spacing: -0.01em;
+    font-weight: 600;
+  }
+  .tagline {
+    color: var(--ink-soft);
+    font-size: 15px;
+    max-width: 58ch;
+    margin: 0;
+  }
+  .layout {
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    gap: 36px;
+  }
+  @media (max-width: 760px) {
+    .layout { grid-template-columns: 1fr; }
+  }
+
+  .field { margin-bottom: 20px; }
+  label {
+    display: block;
+    font-size: 13px;
+    color: var(--ink-soft);
+    margin-bottom: 6px;
+  }
+  input[type=number], select {
+    width: 100%;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 15px;
+    padding: 9px 10px;
+    border: 1px solid #b3aa93;
+    border-radius: 2px;
+    background: var(--panel);
+    color: var(--ink);
+  }
+  input[type=number]:focus, select:focus {
+    outline: none;
+    border-color: var(--brass);
+  }
+  .radio-row {
+    display: flex;
+    gap: 18px;
+    font-size: 14px;
+    padding-top: 2px;
+  }
+  .radio-row label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--ink);
+    margin: 0;
+    font-size: 14px;
+    cursor: pointer;
+  }
+
+  .stub {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    padding: 0;
+  }
+  .stub-head {
+    background: var(--ink);
+    color: var(--paper);
+    padding: 14px 26px;
+    font-size: 13px;
+    letter-spacing: 0.02em;
+    display: flex;
+    justify-content: space-between;
+  }
+  .stub-body { padding: 26px 26px 10px; }
+  .row {
+    display: flex;
+    justify-content: space-between;
+    padding: 9px 0;
+    border-bottom: 1px dotted var(--line);
+    font-size: 15px;
+  }
+  .row .label { color: var(--ink-soft); }
+  .row .value {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-variant-numeric: tabular-nums;
+  }
+  .row.debit .value { color: var(--debit); }
+  .row.section-label {
+    border-bottom: none;
+    padding-top: 20px;
+    padding-bottom: 4px;
+    font-size: 12px;
+    color: var(--ink-soft);
+    letter-spacing: 0.03em;
+  }
+  .row.total {
+    border-top: 2px solid var(--ink);
+    border-bottom: none;
+    margin-top: 8px;
+    padding-top: 14px;
+    font-size: 20px;
+    font-weight: 600;
+  }
+  .row.total .value { color: var(--brass); }
+
+  .breakdown {
+    margin-top: 32px;
+    font-size: 13px;
+    color: var(--ink-soft);
+  }
+  .breakdown summary {
+    cursor: pointer;
+    color: var(--ink);
+    font-size: 14px;
+    margin-bottom: 10px;
+  }
+  .bracket-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 12.5px;
+    margin-top: 8px;
+  }
+  .bracket-table td, .bracket-table th {
+    padding: 5px 8px;
+    text-align: right;
+    border-bottom: 1px solid var(--line);
+  }
+  .bracket-table th { text-align: right; color: var(--ink-soft); font-weight: normal; }
+  .bracket-table td:first-child, .bracket-table th:first-child { text-align: left; }
+
+  footer {
+    margin-top: 48px;
+    padding-top: 18px;
+    border-top: 1px solid var(--line);
+    font-size: 12px;
+    color: var(--ink-soft);
+    line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>US Paycheck &amp; Withholding Estimator</h1>
+    <p class="tagline">Enter a gross salary to see an estimated paycheck breakdown — federal income tax withholding, Social Security, and Medicare — using 2026 IRS figures.</p>
+  </header>
+
+  <div class="layout">
+    <div>
+      <div class="field">
+        <label for="salary">Annual gross salary (USD)</label>
+        <input type="number" id="salary" value="65000" min="0" step="500">
+      </div>
+
+      <div class="field">
+        <label for="freq">Pay frequency</label>
+        <select id="freq">
+          <option value="52">Weekly (52/yr)</option>
+          <option value="26" selected>Biweekly (26/yr)</option>
+          <option value="24">Semi-monthly (24/yr)</option>
+          <option value="12">Monthly (12/yr)</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Filing status</label>
+        <div class="radio-row">
+          <label><input type="radio" name="status" value="single" checked> Single</label>
+          <label><input type="radio" name="status" value="mfj"> Married filing jointly</label>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="stub">
+        <div class="stub-head">
+          <span>Estimated Pay Stub</span>
+          <span id="stub-period">Biweekly</span>
+        </div>
+        <div class="stub-body">
+          <div class="row"><span class="label">Gross pay (this period)</span><span class="value" id="gross-period">—</span></div>
+
+          <div class="row section-label">Deductions</div>
+          <div class="row debit"><span class="label">Federal income tax withholding</span><span class="value" id="fed-wh">—</span></div>
+          <div class="row debit"><span class="label">Social Security (6.2%)</span><span class="value" id="ss-wh">—</span></div>
+          <div class="row debit"><span class="label">Medicare (1.45%)</span><span class="value" id="medicare-wh">—</span></div>
+          <div class="row debit" id="addl-medicare-row" style="display:none;"><span class="label">Additional Medicare (0.9%)</span><span class="value" id="addl-medicare-wh">—</span></div>
+
+          <div class="row total"><span class="label">Estimated net pay</span><span class="value" id="net-period">—</span></div>
+        </div>
+      </div>
+
+      <details class="breakdown">
+        <summary>How this was calculated</summary>
+        <p>Federal withholding uses the annualized-wage method: annual gross minus the 2026 standard deduction, run through the 2026 marginal tax brackets below, then divided across your pay periods. This mirrors the logic behind the IRS's own percentage-method tables, simplified to the standard deduction only — it does not account for W-4 Steps 2–4 (multiple jobs, dependents, other income/deductions), pre-tax benefits, or state and local tax.</p>
+        <table class="bracket-table" id="bracket-table"></table>
+      </details>
+    </div>
+  </div>
+
+  <footer>
+    Figures: 2026 federal income tax brackets and standard deduction per IRS Revenue Procedure 2025-32. Social Security wage base $184,500; Additional Medicare Tax applies above $200,000 (Single) / $250,000 (MFJ). Estimate only — not tax advice; does not include state tax, local tax, or W-4 adjustments beyond the standard deduction. Built by Toms Thankachan.
+  </footer>
+
+</div>
+
+<script>
+const BRACKETS = {
+  single: {
+    std: 16100,
+    bands: [
+      [0, 12400, 0.10],
+      [12400, 50400, 0.12],
+      [50400, 105700, 0.22],
+      [105700, 201775, 0.24],
+      [201775, 256225, 0.32],
+      [256225, 640600, 0.35],
+      [640600, Infinity, 0.37],
+    ],
+    addlMedicareThreshold: 200000
+  },
+  mfj: {
+    std: 32200,
+    bands: [
+      [0, 24800, 0.10],
+      [24800, 100800, 0.12],
+      [100800, 211400, 0.22],
+      [211400, 403550, 0.24],
+      [403550, 512450, 0.32],
+      [512450, 768700, 0.35],
+      [768700, Infinity, 0.37],
+    ],
+    addlMedicareThreshold: 250000
+  }
+};
+
+const SS_WAGE_BASE = 184500;
+const SS_RATE = 0.062;
+const MEDICARE_RATE = 0.0145;
+const ADDL_MEDICARE_RATE = 0.009;
+
+const freqLabels = { "52": "Weekly", "26": "Biweekly", "24": "Semi-monthly", "12": "Monthly" };
+
+function fmt(n) {
+  return "$" + n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function calcFederalTax(taxable, bands) {
+  let tax = 0;
+  for (const [lo, hi, rate] of bands) {
+    if (taxable > lo) {
+      tax += (Math.min(taxable, hi) - lo) * rate;
+    }
+  }
+  return tax;
+}
+
+function render() {
+  const salary = parseFloat(document.getElementById('salary').value) || 0;
+  const freq = document.getElementById('freq').value;
+  const periods = parseInt(freq, 10);
+  const status = document.querySelector('input[name=status]:checked').value;
+  const cfg = BRACKETS[status];
+
+  const taxable = Math.max(0, salary - cfg.std);
+  const annualFedTax = calcFederalTax(taxable, cfg.bands);
+  const ssTaxableWages = Math.min(salary, SS_WAGE_BASE);
+  const annualSS = ssTaxableWages * SS_RATE;
+  const annualMedicare = salary * MEDICARE_RATE;
+  const annualAddlMedicare = Math.max(0, salary - cfg.addlMedicareThreshold) * ADDL_MEDICARE_RATE;
+
+  const grossPeriod = salary / periods;
+  const fedPeriod = annualFedTax / periods;
+  const ssPeriod = annualSS / periods;
+  const medicarePeriod = annualMedicare / periods;
+  const addlMedicarePeriod = annualAddlMedicare / periods;
+  const netPeriod = grossPeriod - fedPeriod - ssPeriod - medicarePeriod - addlMedicarePeriod;
+
+  document.getElementById('stub-period').textContent = freqLabels[freq];
+  document.getElementById('gross-period').textContent = fmt(grossPeriod);
+  document.getElementById('fed-wh').textContent = "-" + fmt(fedPeriod);
+  document.getElementById('ss-wh').textContent = "-" + fmt(ssPeriod);
+  document.getElementById('medicare-wh').textContent = "-" + fmt(medicarePeriod);
+
+  const addlRow = document.getElementById('addl-medicare-row');
+  if (annualAddlMedicare > 0) {
+    addlRow.style.display = 'flex';
+    document.getElementById('addl-medicare-wh').textContent = "-" + fmt(addlMedicarePeriod);
+  } else {
+    addlRow.style.display = 'none';
+  }
+
+  document.getElementById('net-period').textContent = fmt(netPeriod);
+
+  const table = document.getElementById('bracket-table');
+  let html = '<tr><th>Bracket</th><th>Range</th><th>Rate</th></tr>';
+  cfg.bands.forEach(([lo, hi, rate]) => {
+    const hiLabel = hi === Infinity ? '+' : fmt(hi).replace('.00','');
+    html += `<tr><td>${status === 'single' ? 'Single' : 'MFJ'}</td><td>${fmt(lo).replace('.00','')} – ${hiLabel}</td><td>${(rate*100).toFixed(0)}%</td></tr>`;
+  });
+  table.innerHTML = html;
+}
+
+document.getElementById('salary').addEventListener('input', render);
+document.getElementById('freq').addEventListener('change', render);
+document.querySelectorAll('input[name=status]').forEach(el => el.addEventListener('change', render));
+
+render();
+</script>
+</body>
+</html>
